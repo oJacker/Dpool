@@ -1,5 +1,6 @@
 # Docker 实战之容器互联实战 #
 
+
 ## 基于Volume的互联 ##
 
 **理解Docker Volume**
@@ -51,12 +52,38 @@ docker 默认是允许container互通，通过-icc=false 关闭互通。一旦�
 
 ![Volume单机](./images/8.png "Volume单机")
 
-![Volume单机](./images/9.png "Volume单机")
+
+
+## 基于网络的互联 ##
 
 ![Volume单机](./images/9.png "Volume单机")
+
+![Volume单机](./images/10.png "Volume单机")
 
 	docker run --rm=true --name=mysqlserver -p 8066:3306 -e MYSQL_ROOT_PASSWORD=123456 mysql
 
 	docker-proxy -proto tcp -host-ip 0.0.0.0 --host-port 8006 -container-ip 172.17.0.5 --container-port 3306
 
-## 基于网络的互联 ##
+
+有一些边缘情况没有更好的解决，本地主机路由Docker 实例通过其发布的端口调用；
+
+	-A DOCKER ! -i docker0 -p tcp -m tcp --dport 8066 -j DNAT --to-destination 172.17.0.6:3306
+	
+	-A DOCKER -d 172.17.0.6/32 ! -i docker0 -o docker0 -p tcp --dport 3306 -j ACCEPT
+	
+	-A POSTROUTING -s 172.17.0.6/32 -d 172.17.0.6/32 -p tcp -m --dport 3306 -j MASQUERADE
+
+
+**直接使用宿主机网络**
+
+	docker run --rm=true --net=host --name=mysqlserver -e MYSQL_ROOT_PASSWORD=123456 mysql
+
+**容器共用一个IP网络**
+
+	docker run --rm=true --name=mysqlserver -e MYSQL_ROOT_PASSWORD=123456 mysql
+	
+	docker run --rm=true --net =container:mysqlserver java ip adder
+
+	docker run --rm=true --net=container:mysqlserver java curl localhost:3306
+
+备注：目前更为复杂的主流方向docker 容器的IP地址能够被另外主机所访问
